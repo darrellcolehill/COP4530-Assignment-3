@@ -49,9 +49,37 @@ You are tasked with the design of the module responsible for measuring the atmos
 
 ### Correctness
 
+The correctness of this problem depends on decreasing the possibiility of a dead-lock occuring and to limit the time a thread spends waiting for the shared resource as possible. To do this, I implemented a list of AtomicIntegerArrays, where each array in the list represents the readings for 1 hour by all 8 threads. 
+
+The program begins by adding an initialized AtomicIntegerArray to the buffers list at index 0, then we start each of the eight threads. Each thread performs the following:
+
+1. Generates a random temperature reading
+2. Indexes the proper AtomicIntegerArray for the current hour, and continually performs compareAndSet until an open spot in the array is found and inserts the new temperature reading
+3. sleeps for one minute
+
+At this point, if any temperature reading took longer than 1 minute, then there would be errors in the data that would cause it to lose its time-sequence, however, since we are simply generating 8 random integers, this is not a concern.
+
+Once all the threads (representing the sensors) have started, the main thread sleeps for 1 hour, then once the hour has passed, it performs the following:
+
+1. Temporarily store the value of the buffers index tracker
+2. Creates a AtomicIntegerArray and adds it to the buffer
+3. Increments the variable storing the most recent buffer that the sensors should use
+4. Creates a copy of the data stored at the buffer in question (not the newly created one, as it is for the next hour)
+5. Creates a sorted copy of the copy of the buffer (sorry, that was a mouthful)
+6. Uses the sorted copy to find the five smallest/largest values for the hour
+7. Uses the unsorted value to find the 10 minute segment with the largest difference in temperature. 
+8. Displays the results 
+
+Steps 1 through 3 have 1 minute to complete before it results in incorrect storing of data. This is because we need to create a new buffer for the new hour and specify what index in the buffers list it is stored, before the next minute of that new hour begins, so the sensors store their readings in the correct location. Since this process is simply creating one array and incrementing a counter variable with no contention from another thread, we can assume that this process will happen in less than a minute. 
+
+Steps 1-8, must occur within 1 hour before the results cause errors. However, this is not a concern, since the bottle neck with this is the sorting of the copy. Since we are keeping the buffer size small, by making the individual buffers arrays only large enough to store the readings for one hour, sorting is not a concern. Should a large amount of sensors be added, then it could grow to be a concern, and more efficient methods of sorting should be used. 
+
+### Progress guarantee 
+By utilizing AtomicIntegerArrays, we can ensure thread progress since no locking is required. We simple check if a spot contains the initial value (Integer.MAX_VALUE), and if so, then we set the new reading at that location. In the worst case, it would perform 8 compares before finding a location to set the new value. 
+
 
 ### Efficiency
-
+The efficiency of this solution is greatly determined by the sorting algorithm used to sort the copy of the previous hour's readings, and the number of compares must be performed before a thread can set their reading into the specified AtomicIntegerArray. The max number of compares will be the number of sensors in use. The runtime for the sorting is determined by (number of sensors in use)*(readings per hour), both of there are relatively low (since we are only using 8 sensors and 60 readings per hour). 
 
 ### Experimental evaluation
-
+Evaluation was conducted by greatly decreasing the delay between sensor readings and reports. Specifically, the solution was tested by setting the delay between minutes to .5 seconds, and the delay between reports to 1 minute. The general idea was if the algorithm worked with an even smaller time-frame, then it is logical that it will work with a larger time-frame, since the number of operations at each delay remains constant (i.e. at the end of every sensor reading delay, the program gets/stores 8 readings, and at the end of each report delay, a report is generated)
