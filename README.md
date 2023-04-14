@@ -47,6 +47,9 @@ You are tasked with the design of the module responsible for measuring the atmos
 #### Run
 ``` java Problem2 ```
 
+#### Stop
+``` ctrl + c ```
+
 ### Correctness
 
 The correctness of this problem depends on decreasing the possibiility of a dead-lock occuring and to limit the time a thread spends waiting for the shared resource as possible. To do this, I implemented a list of AtomicIntegerArrays, where each array in the list represents the readings for 1 hour by all 8 threads. 
