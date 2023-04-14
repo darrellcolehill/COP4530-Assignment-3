@@ -3,7 +3,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicIntegerArray;
-
+import java.text.SimpleDateFormat;  
+import java.util.Date;  
 
 
 public class Problem2 {
@@ -74,8 +75,10 @@ public class Problem2 {
 
     public static void main(String[] args) {
 
-        int sensorReadingDelay = 30000; // 60000; // 60000 = 1 minute?
-        int reportGenerationDelay = 60000; // 3600000 = 1 hour?
+        int sensorReadingDelay = 60000; // 60000 = 1 minute
+        int reportGenerationDelay = 3600000; // 3600000 = 1 hour
+
+        SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");  
 
         // initializes the buffers list with a list for the first hour
         buffersList.add(generateBuffer());
@@ -109,12 +112,14 @@ public class Problem2 {
 
 
             int[] readings = new int[bufferSize];
+            int[] sortedReadings = new int[bufferSize];
             for (int i = 0; i < bufferSize; i++) {
                 readings[i] = buffersList.get(currentHoursBuffer).get(i);
+                sortedReadings[i] = readings[i];
             }
 
-            // sort readings
-            Arrays.sort(readings); 
+            // sort readings in a new structure. Keeps the original in readings so that we can maintain the time-sequence
+            Arrays.sort(sortedReadings); 
 
 
             // Gets the top 5 largest for the hour, by utilizing the sorted property of the buffer
@@ -122,7 +127,7 @@ public class Problem2 {
             // get the first index that is not Integer.max and make that the highest index
             for(int i = 0; i < bufferSize; i++)
             {
-                if(readings[bufferSize - i - 1] != Integer.MAX_VALUE)
+                if(sortedReadings[bufferSize - i - 1] != Integer.MAX_VALUE)
                 {
                     highestIndex = bufferSize - i - 1;
                     break;
@@ -132,37 +137,74 @@ public class Problem2 {
 
             int[] highest = new int[5];
             for (int i = 0; i < 5; i++) {
-                highest[i] = readings[highestIndex--];
+                highest[i] = sortedReadings[highestIndex--];
             }
 
             // Gets the top 5 lowest for the hour, by utilizing the sorted property of the buffer
             int lowestIndex = 0;
             int[] lowest = new int[5];
             for (int i = 0; i < 5; i++) {
-                lowest[i] = readings[lowestIndex++];
+                lowest[i] = sortedReadings[lowestIndex++];
             }
 
+            /*
+             * sensor delay = 1 minute
+             * report generation delay = 1 hour
+             * 
+             * in one hour, we will have 60 readings from each sensor
+             * in total, 480.
+             * 
+             * each segment of 8 readings represents 1 minute worth of reads across all sensors
+             * each segment of 80 readings represents 10 minutes work of reads across all sensors
+             * 
+             * the min and max in each segment of 80 readings is largest difference in temperature in that 10 minute segment
+             */
 
-            // cut the reading array into segments for each 10 minutes
-            // for each 10 minites, calculate the difference between the min and max
-            // find the segment with the largest difference
+
+            int[][] ten_minute_segment_differences = new int[6][3];
+            int segmentIdxMaxDifference = 0;
             int maxDifference = 0;
-            int maxDifferenceIndex = 0;
-            // for (int i = 0; i < bufferSize - 10; i++) {
-            //     int difference = readings[i + 10] - readings[i];
-            //     if (difference > maxDifference) {
-            //         maxDifference = difference;
-            //         maxDifferenceIndex = i;
-            //     }
-            // }
 
-            int maxDifferenceStart = maxDifferenceIndex + 1;
-            int maxDifferenceEnd = maxDifferenceIndex + 10;
+            for (int i = 0; i < 6; i++) 
+            {
+                int startIndex = i * 80;
+                int endIndex = startIndex + 79;
+                
+                int min = readings[startIndex];
+                int max = readings[startIndex];
+                
+                for (int j = startIndex + 1; j <= endIndex; j++) {
+                    if (readings[j] < min) {
+                        min = readings[j];
+                    }
+                    if (readings[j] > max) {
+                        max = readings[j];
+                    }
+                }
+                
+                ten_minute_segment_differences[i][0] = min;
+                ten_minute_segment_differences[i][1] = max;
+                ten_minute_segment_differences[i][2] = max - min;
 
-            System.out.println("Report for hour: " + System.currentTimeMillis() / 3600000);
+                if(ten_minute_segment_differences[i][2] > maxDifference)
+                {
+                    segmentIdxMaxDifference = i;
+                }
+                
+            }
+
+            System.out.println("\n\n===============================================");
+            Date date = new Date();  
+            System.out.println("Current time: " + date);
+            System.out.println("Report for hour");
             System.out.println("Top 5 highest temperatures: " + Arrays.toString(highest));
             System.out.println("Top 5 lowest temperatures: " + Arrays.toString(lowest));
-            // System.out.println("Largest temperature difference: " + maxDifference + "F between " + maxDifference);
+            int segmentEnd = (segmentIdxMaxDifference + 1) * 10;
+            int segmentStart = segmentEnd - 10;
+            System.out.println("Largest temperature difference bewteen minute " + segmentStart + " and " + segmentEnd + " of current hour" );
+            System.out.println("Largest temperature difference: " + maxDifference + "F");
+            System.out.println("===============================================\n\n");
+
         }
     }
 }
