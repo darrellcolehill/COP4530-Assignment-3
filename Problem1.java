@@ -122,7 +122,6 @@ public class Problem1 {
         numberOfCards += 1;
     }
 
-
     // Simulates the random selection of a servent to look through the list. 
     public static boolean determineIfServentShouldLook()
     {
